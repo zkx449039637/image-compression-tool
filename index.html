@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片压缩工具</title>
+    <link rel="stylesheet" href="styles/main.css">
+    
+    <!-- 引入字体图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="header">
+        <div class="container">
+            <h1 class="logo">
+                <i class="fas fa-compress-alt"></i>
+                图片压缩工具
+            </h1>
+            <button class="help-btn" title="使用说明">
+                <i class="fas fa-question-circle"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- 主要内容区 -->
+    <main class="main">
+        <div class="container">
+            <!-- 拖拽上传区域 -->
+            <div class="upload-area" id="uploadArea">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>拖拽图片到这里或点击上传</p>
+                <input type="file" id="fileInput" multiple accept="image/*" hidden>
+            </div>
+
+            <!-- 数据处理说明 -->
+            <div class="info-panel">
+                <h3><i class="fas fa-info-circle"></i> 数据处理说明</h3>
+                <ul>
+                    <li>所有图片处理均在浏览器内存中进行，不会保存到本地</li>
+                    <li>关闭页面后，所有数据会自动清除，不会占用本地存储空间</li>
+                    <li>每次处理新图片时，会自动清理之前的资源</li>
+                    <li>压缩后的图片需要手动点击下载按钮保存</li>
+                </ul>
+            </div>
+
+            <!-- 压缩设置面板 -->
+            <div class="settings-panel">
+                <h2>压缩设置</h2>
+                <div class="setting-item">
+                    <label for="quality">压缩质量：</label>
+                    <input type="range" id="quality" min="0" max="100" value="80">
+                    <span id="qualityValue">80%</span>
+                </div>
+                <!-- 下载按钮移到这里 -->
+                <button class="download-btn" id="downloadBtn" disabled>
+                    <i class="fas fa-download"></i>
+                    下载压缩后的图片
+                </button>
+            </div>
+
+            <!-- 图片预览区域 -->
+            <div class="preview-area" id="previewArea">
+                <div class="preview-header">
+                    <h2>图片预览</h2>
+                    <button class="toggle-btn" id="togglePreviewBtn">
+                        <span class="show-text">显示全部</span>
+                        <span class="hide-text">收起</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                </div>
+                <div class="preview-container">
+                    <!-- 预览图片将通过JavaScript动态添加 -->
+                </div>
+            </div>
+
+            <!-- 压缩对比区域 -->
+            <div class="comparison-area">
+                <div class="comparison-header">
+                    <h2>压缩效果对比</h2>
+                </div>
+                <div class="comparison-container" id="comparisonContainer">
+                    <!-- 对比内容将通过JavaScript动态添加 -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 底部区域 -->
+    <footer class="footer">
+        <div class="container">
+            <p class="copyright">© 2024 图片压缩工具. 保留所有权利.</p>
+        </div>
+    </footer>
+
+    <!-- JSZip库用于打包下载 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="scripts/main.js"></script>
+</body>
+</html> 
