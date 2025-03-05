@@ -117,6 +117,7 @@ async function createComparisonElement(imageData) {
     originalSide.className = 'comparison-side';
     originalSide.innerHTML = `
         <h3>原始图片</h3>
+        <div class="filename" title="${original.name}">${original.name}</div>
         <img src="${originalUrl}" class="comparison-image" alt="原图" onload="URL.revokeObjectURL('${originalUrl}')">
         <div class="size-info">
             <span>大小：${formatFileSize(original.size)}</span>
@@ -128,6 +129,7 @@ async function createComparisonElement(imageData) {
     compressedSide.className = 'comparison-side';
     compressedSide.innerHTML = `
         <h3>压缩后</h3>
+        <div class="filename" title="compressed_${original.name}">compressed_${original.name}</div>
         <img src="${compressedUrl}" class="comparison-image" alt="压缩图" onload="URL.revokeObjectURL('${compressedUrl}')">
         <div class="size-info">
             <span>大小：${formatFileSize(compressed.size)}</span>
@@ -212,6 +214,7 @@ async function createPreviewElement(img, filename) {
     const nameLabel = document.createElement('div');
     nameLabel.className = 'filename';
     nameLabel.textContent = filename;
+    nameLabel.title = filename;
     
     container.appendChild(canvas);
     container.appendChild(nameLabel);
