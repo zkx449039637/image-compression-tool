@@ -281,52 +281,110 @@ function compressImage(file, quality) {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             
+            // 使用原始尺寸
             canvas.width = img.width;
             canvas.height = img.height;
             
             // 绘制图片到canvas
-            ctx.fillStyle = 'white'; // 设置白色背景
+            ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(img, 0, 0, img.width, img.height);
 
             // 判断图片类型和特征
             const isPNG = file.type === 'image/png';
+            const isJPEG = file.type === 'image/jpeg' || file.type === 'image/jpg';
             const isSmallFile = file.size < 200 * 1024; // 200KB
-            
-            // 对于PNG格式的图片，保持原格式并使用无损压缩
-            if (isPNG) {
+            const isLargeFile = file.size > 1024 * 1024; // 1MB
+
+            // 分析图片是否包含透明度
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            let hasTransparency = false;
+            for (let i = 3; i < imageData.length; i += 4) {
+                if (imageData[i] < 255) {
+                    hasTransparency = true;
+                    break;
+                }
+            }
+
+            // 渐进式压缩函数
+            const progressiveCompress = (startQuality, minQuality = 0.3, step = 0.1) => {
+                const tryCompress = (q) => {
+                    canvas.toBlob(
+                        (blob) => {
+                            if (blob.size < file.size) {
+                                resolve(blob);
+                            } else if (q > minQuality) {
+                                tryCompress(q - step);
+                            } else {
+                                // 如果达到最低质量还是没有压缩效果，尝试更低的质量
+                                if (minQuality === 0.3 && blob.size >= file.size) {
+                                    progressiveCompress(0.3, 0.1, 0.05);
+                                } else {
+                                    resolve(blob);
+                                }
+                            }
+                        },
+                        'image/jpeg',
+                        q
+                    );
+                };
+                tryCompress(startQuality);
+            };
+
+            // 根据文件类型和大小选择压缩策略
+            if (isPNG && hasTransparency) {
+                // 包含透明度的PNG，保持PNG格式
                 canvas.toBlob(
                     (blob) => {
                         if (blob.size < file.size) {
                             resolve(blob);
                         } else {
-                            resolve(file); // 如果压缩后更大，返回原图
+                            // 尝试更低质量的PNG压缩
+                            canvas.toBlob(
+                                (blob2) => blob2.size < file.size ? resolve(blob2) : resolve(file),
+                                'image/png',
+                                0.7
+                            );
                         }
                     },
                     'image/png',
-                    1.0
+                    0.8
                 );
-            } else if (isSmallFile) {
-                // 小文件使用较高质量的JPEG压缩
-                canvas.toBlob(
-                    (blob) => {
-                        if (blob.size < file.size) {
-                            resolve(blob);
-                        } else {
-                            resolve(file);
-                        }
-                    },
-                    'image/jpeg',
-                    Math.max(0.92, quality)
-                );
+            } else if (isJPEG || !hasTransparency) {
+                // 对于JPEG图片或不包含透明度的图片，使用JPEG压缩
+                if (isLargeFile) {
+                    // 大文件使用更激进的压缩策略
+                    progressiveCompress(quality, 0.1, 0.1);
+                } else if (isSmallFile) {
+                    // 小文件也尝试适度压缩
+                    canvas.toBlob(
+                        (blob) => {
+                            if (blob.size < file.size) {
+                                resolve(blob);
+                            } else {
+                                // 如果初次压缩失败，尝试更低质量
+                                canvas.toBlob(
+                                    (blob2) => blob2.size < file.size ? resolve(blob2) : resolve(file),
+                                    'image/jpeg',
+                                    0.7
+                                );
+                            }
+                        },
+                        'image/jpeg',
+                        0.8
+                    );
+                } else {
+                    // 中等大小文件使用渐进式压缩
+                    progressiveCompress(0.8, 0.3, 0.1);
+                }
             } else {
-                // 大文件使用用户指定的质量进行JPEG压缩
+                // 其他格式图片
                 canvas.toBlob(
                     (blob) => {
                         if (blob.size < file.size) {
                             resolve(blob);
                         } else {
-                            resolve(file);
+                            progressiveCompress(0.8, 0.3, 0.1);
                         }
                     },
                     'image/jpeg',
