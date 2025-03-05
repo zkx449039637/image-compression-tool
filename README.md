@@ -40,4 +40,4 @@ git clone https://github.com/zkx449039637/image-compression-tool.git
 
 ## 开源协议
 
-MIT License 
+MIT License
