@@ -221,23 +221,6 @@ async function createPreviewElement(img, filename) {
 }
 
 /**
- * 更新压缩率标签
- * @param {HTMLElement} element - 预览元素
- * @param {number} compressionRate - 压缩率
- */
-function updateCompressionBadge(element, compressionRate) {
-    const existingBadge = element.querySelector('.compression-badge');
-    if (existingBadge) {
-        existingBadge.remove();
-    }
-
-    const badge = document.createElement('div');
-    badge.className = 'compression-badge';
-    badge.textContent = `压缩率: ${compressionRate}%`;
-    element.appendChild(badge);
-}
-
-/**
  * 压缩所有图片
  */
 async function compressAllImages() {
@@ -246,14 +229,38 @@ async function compressAllImages() {
     
     for (const image of uploadedImages) {
         try {
-            const compressed = await compressImage(image.original, quality);
+            // 判断原图大小
+            const originalSize = image.original.size;
+            let compressed;
+
+            // 如果原图小于200KB，使用较高的质量或直接使用原图
+            if (originalSize < 200 * 1024) { // 200KB
+                if (quality < 0.92) {
+                    // 如果用户选择的质量太低，使用较高的质量以避免文件变大
+                    compressed = await compressImage(image.original, 0.92);
+                    // 如果压缩后反而变大，则使用原图
+                    if (compressed.size > originalSize) {
+                        compressed = image.original;
+                    }
+                } else {
+                    compressed = await compressImage(image.original, quality);
+                    // 如果压缩后变大，则使用原图
+                    if (compressed.size > originalSize) {
+                        compressed = image.original;
+                    }
+                }
+            } else {
+                // 大图片正常压缩
+                compressed = await compressImage(image.original, quality);
+            }
+
             image.compressed = compressed;
             
             // 创建对比预览
             await createComparisonElement(image);
             
             // 更新压缩率标签
-            const compressionRate = Math.round((1 - compressed.size / image.original.size) * 100);
+            const compressionRate = Math.round((1 - compressed.size / originalSize) * 100);
             updateCompressionBadge(image.element, compressionRate);
         } catch (error) {
             console.error('压缩图片时出错:', error);
@@ -277,13 +284,55 @@ function compressImage(file, quality) {
             canvas.width = img.width;
             canvas.height = img.height;
             
+            // 绘制图片到canvas
+            ctx.fillStyle = 'white'; // 设置白色背景
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0);
+
+            // 判断图片类型和特征
+            const isPNG = file.type === 'image/png';
+            const isSmallFile = file.size < 200 * 1024; // 200KB
             
-            canvas.toBlob(
-                (blob) => resolve(blob),
-                'image/jpeg',
-                quality
-            );
+            // 对于PNG格式的图片，保持原格式并使用无损压缩
+            if (isPNG) {
+                canvas.toBlob(
+                    (blob) => {
+                        if (blob.size < file.size) {
+                            resolve(blob);
+                        } else {
+                            resolve(file); // 如果压缩后更大，返回原图
+                        }
+                    },
+                    'image/png',
+                    1.0
+                );
+            } else if (isSmallFile) {
+                // 小文件使用较高质量的JPEG压缩
+                canvas.toBlob(
+                    (blob) => {
+                        if (blob.size < file.size) {
+                            resolve(blob);
+                        } else {
+                            resolve(file);
+                        }
+                    },
+                    'image/jpeg',
+                    Math.max(0.92, quality)
+                );
+            } else {
+                // 大文件使用用户指定的质量进行JPEG压缩
+                canvas.toBlob(
+                    (blob) => {
+                        if (blob.size < file.size) {
+                            resolve(blob);
+                        } else {
+                            resolve(file);
+                        }
+                    },
+                    'image/jpeg',
+                    quality
+                );
+            }
         };
         img.onerror = reject;
         
@@ -351,6 +400,31 @@ function cleanup() {
     previewContainer.innerHTML = '';
     comparisonContainer.innerHTML = '';
     uploadedImages = [];
+}
+
+/**
+ * 更新压缩率标签
+ * @param {HTMLElement} element - 预览元素
+ * @param {number} compressionRate - 压缩率
+ */
+function updateCompressionBadge(element, compressionRate) {
+    const existingBadge = element.querySelector('.compression-badge');
+    if (existingBadge) {
+        existingBadge.remove();
+    }
+
+    const badge = document.createElement('div');
+    badge.className = 'compression-badge';
+    
+    // 根据压缩率显示不同的信息
+    if (compressionRate <= 0) {
+        badge.textContent = '已是最佳大小';
+        badge.classList.add('optimal-size');
+    } else {
+        badge.textContent = `压缩率: ${compressionRate}%`;
+    }
+    
+    element.appendChild(badge);
 }
 
 // 初始化应用
